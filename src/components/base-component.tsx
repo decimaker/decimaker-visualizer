@@ -28,7 +28,7 @@ export abstract class BaseComponent<TProps = Dictionary<any>, TState = Dictionar
         if (undefined !== defaultValue)
             safeSetState(this, { [key]: defaultValue } as any);
 
-        this.subscriptions.set(key, obs.subscribe(value => {
+        this.subscriptions.set(key, obs.subscribe((value: any) => {
             safeSetState<TProps, TState>(this as any, { [key]: value } as any);
         }));
     }
