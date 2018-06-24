@@ -1,21 +1,55 @@
 import {Configuration} from 'webpack';
-import webpack from 'webpack';
-import merge from 'webpack-merge';
-import common from './webpack.common';
 
-const publicPath = '/';
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const ErrorOverlayPlugin = require('error-overlay-webpack-plugin');
+const HardSourceWebpackPlugin = require('hard-source-webpack-plugin');
+const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 
-const config: Configuration = merge.smart(common, {
+const config: Configuration & { serve: any } = {
+    devtool: 'eval-source-map',
+    mode: 'development',
+    entry: ['./src/index.tsx'], // Needs to be an array for webpack-hot-client
+    serve: {
+        dev: {
+            stats: 'minimal'
+        }
+    },
+    // Currently we need to add '.ts' to the resolve.extensions array.
+    resolve: {
+        extensions: ['.ts', '.tsx', '.js', '.jsx']
+    },
     output: {
-        publicPath: publicPath // fix webpack-dev-server font url problems
+        path: __dirname + '/dist',
+        filename: 'index.js'
     },
 
-    devServer: {
-        stats: 'minimal',
-        historyApiFallback: true,
-    },
+    // Add the loader for .ts files.
     module: {
         rules: [
+            {
+                test: /\.tsx?$/,
+                use: [
+                    {
+                        loader: 'thread-loader',
+                        options: {
+                            workers: 4,
+                            poolTimeout: Number.POSITIVE_INFINITY
+                        }
+                    },
+                    {
+                        loader: 'babel-loader',
+                        options: {
+                            cacheDirectory: true
+                        }
+                    },
+                    {
+                        loader: 'ts-loader',
+                        options: {
+                            happyPackMode: true
+                        }
+                    }
+                ]
+            },
             {
                 test: /\.scss$/,
                 use: [
@@ -23,15 +57,23 @@ const config: Configuration = merge.smart(common, {
                     { loader: 'css-loader', options: { sourceMap: true } },
                     { loader: 'sass-loader', options: { sourceMap: true } }
                 ]
+            },
+            {
+                test: /\.(png|svg|jpg|gif)$/,
+                use: [
+                    'file-loader'
+                ]
             }
         ]
     },
     plugins: [
-        new webpack.DefinePlugin({
-            'SERVER_BASE_URL': JSON.stringify('http://localhost/api/'),
-            'BASE_HREF': JSON.stringify(publicPath)
-        })
+        new ForkTsCheckerWebpackPlugin({ checkSyntacticErrors: true }),
+        new HtmlWebpackPlugin({
+            title: 'Decimaker visualizer'
+        }),
+        new ErrorOverlayPlugin(),
+        new HardSourceWebpackPlugin(),
     ]
-});
+};
 
 export default config;
